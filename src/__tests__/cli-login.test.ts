@@ -95,7 +95,7 @@ function browserThatApproves(key: string, record?: { url?: string }, keyId: stri
     setTimeout(() => {
       void fetch(`http://127.0.0.1:${url.searchParams.get('port')}/callback`, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        headers: { 'content-type': 'application/x-www-form-urlencoded', origin: url.origin },
         body: new URLSearchParams({
           state: url.searchParams.get('state')!,
           key,

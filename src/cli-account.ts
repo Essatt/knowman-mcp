@@ -72,7 +72,7 @@ import { redactSecret } from './redact'
 
 export { redactSecret }
 
-type RevokeResult = 'revoked' | 'already-invalid' | 'no-id' | { failed: string }
+type RevokeResult = 'revoked' | 'already-invalid' | 'no-id' | 'unsafe-url' | { failed: string }
 
 /**
  * Revoke a saved key on the server, authenticating with that same key (DELETE /auth/api-keys/:id
@@ -81,6 +81,7 @@ type RevokeResult = 'revoked' | 'already-invalid' | 'no-id' | { failed: string }
  */
 async function revokeStoredKey(stored: StoredAuth, ctx: AccountContext): Promise<RevokeResult> {
   if (!stored.keyId) return 'no-id'
+  if (stored.apiUrl !== DEFAULT_API_URL && !isSafeEndpointUrl(stored.apiUrl)) return 'unsafe-url'
   const client = (ctx.clientFactory ?? createClient)({
     apiUrl: stored.apiUrl,
     apiKey: stored.apiKey,
@@ -297,6 +298,8 @@ async function login(args: string[], ctx: AccountContext): Promise<number> {
     if (result === 'revoked') io.log('Revoked the key this sign-in replaced.')
     else if (result === 'no-id') {
       io.error(`Note: the previous saved key has no recorded id, so it was not revoked. Remove it in ${CONNECTIONS_HINT}.`)
+    } else if (result === 'unsafe-url') {
+      io.error(`Warning: the previous key was not revoked because its saved server address is unsafe. Remove it by hand in ${CONNECTIONS_HINT}.`)
     } else if (typeof result === 'object') {
       io.error(`Warning: could not revoke the previous key (${result.failed}). Remove it in ${CONNECTIONS_HINT}.`)
     }
@@ -349,7 +352,9 @@ async function logout(ctx: AccountContext): Promise<number> {
     const why =
       result === 'no-id'
         ? 'it has no recorded key id, so it could not be revoked automatically'
-        : `the server could not be asked to revoke it (${result.failed})`
+        : result === 'unsafe-url'
+          ? 'its saved server address is unsafe, so the key was not sent anywhere'
+          : `the server could not be asked to revoke it (${result.failed})`
     ctx.io.log(
       `Signed out locally: removed ${path}. The key itself is still valid on the server because ${why}. Revoke it in ${CONNECTIONS_HINT}.`,
     )

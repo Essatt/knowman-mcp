@@ -53,7 +53,7 @@ function fakeBrowser(
 function form(fields: Record<string, string>): RequestInit {
   return {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test' },
     body: new URLSearchParams(fields).toString(),
   }
 }
@@ -68,7 +68,7 @@ function postWithHost(port: number, host: string, fields: Record<string, string>
         port,
         path: '/callback',
         method: 'POST',
-        headers: { host, 'content-type': 'application/x-www-form-urlencoded', 'content-length': Buffer.byteLength(body) },
+        headers: { host, 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test', 'content-length': Buffer.byteLength(body) },
       },
       (res) => {
         const chunks: Buffer[] = []
@@ -369,7 +369,7 @@ describe('runLogin', () => {
       const state = url.searchParams.get('state')!
       const plain = await fetch(callback, {
         method: 'POST',
-        headers: { 'content-type': 'text/plain' },
+        headers: { 'content-type': 'text/plain', origin: 'https://app.example.test' },
         body: new URLSearchParams({ state, key: 'km_live_key', keyId: 'kid_1' }).toString(),
       })
       statuses.push(plain.status)
@@ -386,7 +386,7 @@ describe('runLogin', () => {
       const state = url.searchParams.get('state')!
       const oversized = await fetch(callback, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test' },
         body: `state=${state}&key=${'k'.repeat(9 * 1024)}`,
       })
       oversizedStatus = oversized.status
@@ -418,6 +418,33 @@ describe('runLogin', () => {
     const result = await runLogin({ ...baseOptions, openBrowser: browser.openBrowser })
     expect(status).toBe(403)
     expect(result.apiKey).toBe('km_good_key')
+  })
+
+  test('rejects a callback with no Origin header and accepts a later callback from the web app', async () => {
+    let noOriginStatus = 0
+    const browser = fakeBrowser(async ({ url, callback }) => {
+      const fields = {
+        state: url.searchParams.get('state')!,
+        key: 'km_no_origin',
+        keyId: 'kid_no_origin',
+      }
+      const noOrigin = await fetch(callback, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(fields).toString(),
+      })
+      noOriginStatus = noOrigin.status
+      return fetch(callback, {
+        ...form({ ...fields, key: 'km_good_key', keyId: 'kid_good' }),
+        headers: { 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test' },
+      })
+    })
+
+    const result = await runLogin({ ...baseOptions, openBrowser: browser.openBrowser })
+
+    expect(noOriginStatus).toBe(403)
+    expect(result.apiKey).toBe('km_good_key')
+    expect(result.keyId).toBe('kid_good')
   })
 
   test('R10: two concurrent good callbacks -> exactly one 200 and one 409, first key wins', async () => {
@@ -466,7 +493,7 @@ describe('runLogin', () => {
           (kind === 'success' ? "key: 'km_good_key', keyId: 'kid_1'" : "error: 'access_denied'") + " });",
         "const req = http.request({ host: '127.0.0.1', port: Number(target.searchParams.get('port')),",
         " path: '/callback', method: 'POST', headers: { host: '127.0.0.1:' + target.searchParams.get('port'),",
-        " 'content-type': 'application/x-www-form-urlencoded' } });",
+        " 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test' } });",
         "req.on('error', () => {}); req.end(fields.toString());",
         "await attempted;",
         event === 'timeout'
@@ -474,7 +501,7 @@ describe('runLogin', () => {
               "timer();",
               "const duplicate = http.request({ host: '127.0.0.1', port: Number(target.searchParams.get('port')),",
               " path: '/callback', method: 'POST', headers: { host: '127.0.0.1:' + target.searchParams.get('port'),",
-              " 'content-type': 'application/x-www-form-urlencoded' } });",
+              " 'content-type': 'application/x-www-form-urlencoded', origin: 'https://app.example.test' } });",
               "duplicate.on('error', () => {}); duplicate.end(fields.toString());",
               "while (statusCodes.length < 2) await new Promise(resolve => setTimeout(resolve, 1));",
               "if (statusCodes[1] !== 409) throw new Error('accepted callback duplicate must be 409');",
@@ -601,14 +628,14 @@ test('R5: runLogin resolves and closes an incomplete peer within 2000 ms of the 
   })
   await new Promise<void>((resolve) => incomplete.on('connect', resolve))
   incomplete.write(
-    `POST /callback HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Length: 999\r\n\r\n`,
+    `POST /callback HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: https://app.knowman.io\r\nContent-Length: 999\r\n\r\n`,
   )
 
   const good = net.connect(port, '127.0.0.1')
   await new Promise<void>((resolve) => good.on('connect', resolve))
   const body = new URLSearchParams({ state, key: 'km_testkey', keyId: 'kid123' }).toString()
   good.write(
-    `POST /callback HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\n\r\n${body}`,
+    `POST /callback HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: https://app.knowman.io\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\n\r\n${body}`,
   )
   const replied = new Promise<void>((resolve) => good.on('data', resolve))
   await replied
@@ -643,7 +670,7 @@ describe('late callback after the timeout (publish-readiness fix 1)', () => {
       const socket = net.createConnection({ host: '127.0.0.1', port });
       await new Promise((resolve, reject) => { socket.once('connect', resolve); socket.once('error', reject) });
       const body = new URLSearchParams({ state: target.searchParams.get('state'), key: 'km_late_key', keyId: 'kid_late' }).toString();
-      socket.write('POST /callback HTTP/1.1\\r\\nHost: 127.0.0.1:' + port + '\\r\\nContent-Type: application/x-www-form-urlencoded\\r\\nContent-Length: ' + Buffer.byteLength(body) + '\\r\\n');
+      socket.write('POST /callback HTTP/1.1\\r\\nHost: 127.0.0.1:' + port + '\\r\\nOrigin: https://app.example.test\\r\\nContent-Type: application/x-www-form-urlencoded\\r\\nContent-Length: ' + Buffer.byteLength(body) + '\\r\\n');
       await new Promise((resolve) => setTimeout(resolve, 30));
       const response = new Promise((resolve, reject) => {
         const chunks = [];
@@ -704,6 +731,7 @@ describe('late callback after the timeout (publish-readiness fix 1)', () => {
           method: 'POST',
           headers: {
             'content-type': 'application/x-www-form-urlencoded',
+            origin: 'https://app.example.test',
             'content-length': Buffer.byteLength(body),
           },
         },

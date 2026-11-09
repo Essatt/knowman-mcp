@@ -180,7 +180,7 @@ export async function runLogin(options: LoginOptions): Promise<{ apiKey: string;
       }
 
       const origin = req.headers.origin
-      if (typeof origin === 'string' && origin !== 'null' && origin !== webOrigin) {
+      if (origin === undefined || (origin !== 'null' && origin !== webOrigin)) {
         return reply(res, 403, page('Forbidden', 'This request did not come from KnowMan.'))
       }
 
@@ -253,7 +253,7 @@ export async function runLogin(options: LoginOptions): Promise<{ apiKey: string;
           reject(new LoginError('Timed out waiting for the browser sign-in.'))
         },
         lifetimeMs,
-      )
+      ) as ReturnType<typeof setTimeout>
 
       options.onUrl?.(url.toString())
       Promise.resolve(options.openBrowser(url.toString())).catch(() => {
