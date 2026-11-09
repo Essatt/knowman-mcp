@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Essatt/knowman-mcp",
+  "description": "KnowMan MCP server: search, ask, save and read your Knowledge Base from any MCP client.",
+  "version": "0.3.0",
+  "websiteUrl": "https://knowman.io",
+  "repository": {
+    "url": "https://github.com/Essatt/knowman-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@knowman/mcp",
+      "version": "0.3.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "KNOWMAN_API_KEY",
+          "description": "Your KnowMan API key (create one at https://app.knowman.io)",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

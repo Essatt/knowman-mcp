@@ -1,0 +1,54 @@
+{
+  "name": "@knowman/mcp",
+  "mcpName": "io.github.Essatt/knowman-mcp",
+  "version": "0.3.0",
+  "private": false,
+  "type": "module",
+  "description": "KnowMan MCP server (stdio) — search, ask, save and read your Knowledge Base from any MCP client",
+  "license": "MIT",
+  "author": "KnowMan",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "knowman",
+    "knowledge-base",
+    "read-it-later"
+  ],
+  "homepage": "https://knowman.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Essatt/knowman-mcp.git"
+  },
+  "bin": {
+    "mcp": "dist/index.js",
+    "knowman-mcp": "dist/index.js",
+    "knowman": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts src/cli.ts --target=node --outdir=dist && node scripts/postbuild.mjs",
+    "smoke": "bun run build && node scripts/smoke.mjs",
+    "inspect": "bun run build && node scripts/inspect.mjs",
+    "verify-install": "bash scripts/verify-install.sh",
+    "docs:sync": "bun scripts/sync-readme.ts",
+    "pack:mcpb": "node scripts/pack-mcpb.mjs",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run build",
+    "clean": "rm -rf dist .turbo node_modules"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^3.24.1",
+    "typescript": "^5.7.2",
+    "@types/bun": "latest"
+  }
+}

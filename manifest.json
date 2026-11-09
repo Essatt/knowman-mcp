@@ -1,0 +1,58 @@
+{
+  "manifest_version": "0.3",
+  "name": "knowman",
+  "display_name": "KnowMan",
+  "version": "0.3.0",
+  "description": "Search, ask, save and read your KnowMan Knowledge Base from Claude",
+  "author": {
+    "name": "KnowMan",
+    "url": "https://knowman.io"
+  },
+  "homepage": "https://knowman.io",
+  "license": "UNLICENSED",
+  "keywords": ["mcp", "knowledge-base", "read-it-later", "knowman"],
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.mjs"],
+      "env": {
+        "KNOWMAN_API_KEY": "${user_config.api_key}",
+        "KNOWMAN_API_URL": "${user_config.api_url}"
+      }
+    }
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "KnowMan API key",
+      "description": "Create one in KnowMan under Settings, then API keys. Stored in the system keychain.",
+      "sensitive": true,
+      "required": true
+    },
+    "api_url": {
+      "type": "string",
+      "title": "KnowMan API URL",
+      "description": "Leave the default unless KnowMan told you to change it.",
+      "default": "https://api.knowman.io",
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "kb_search", "description": "Search saved items in the KnowMan Inbox, Knowledge Base and Archive." },
+    { "name": "kb_ask", "description": "Ask a question over the Knowledge Base, with citations." },
+    { "name": "kb_get_item", "description": "Read the content and metadata of one saved item." },
+    { "name": "kb_save", "description": "Save a URL to the KnowMan Inbox or Knowledge Base." },
+    { "name": "kb_recent", "description": "List recently saved items." },
+    { "name": "kb_memories", "description": "List saved memories and playbooks from the Knowledge Base (read-only)." }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
+  }
+}
