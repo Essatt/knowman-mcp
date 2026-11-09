@@ -39,6 +39,19 @@ Claude Desktop (`claude_desktop_config.json`):
     }
   }
 }
+```
+
+Claude Code:
+
+```bash
+claude mcp add knowman --env KNOWMAN_API_KEY=<your-key> -- npx -y @knowman/mcp
+```
+
+Cursor (`~/.cursor/mcp.json`, or `.cursor/mcp.json` in a project): use the same `mcpServers` JSON as the Claude Desktop example above.
+
+Prefer signing in with the browser instead of pasting a key? Install the package globally (`npm install -g @knowman/mcp`) and run `knowman login`. The saved credential is shared with `knowman-mcp`, so the `env` block is not needed. Run `knowman status` to check it.
+
+This server speaks stdio, so it runs on your own machine. It is not a hosted or remote MCP endpoint, so clients that only accept remote servers (for example ChatGPT connectors or claude.ai on the web) cannot use it yet.
 
 ## CLI reference
 
