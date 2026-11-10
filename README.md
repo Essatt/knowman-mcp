@@ -51,7 +51,34 @@ Cursor (`~/.cursor/mcp.json`, or `.cursor/mcp.json` in a project): use the same 
 
 Prefer signing in with the browser instead of pasting a key? Install the package globally (`npm install -g @knowman/mcp`) and run `knowman login`. The saved credential is shared with `knowman-mcp`, so the `env` block is not needed. Run `knowman status` to check it.
 
-This server speaks stdio, so it runs on your own machine. It is not a hosted or remote MCP endpoint, so clients that only accept remote servers (for example ChatGPT connectors or claude.ai on the web) cannot use it yet.
+The package above speaks stdio and runs on your own machine. KnowMan also runs a hosted server, described next, for clients that only accept remote MCP servers.
+
+## Remote (hosted) server
+
+Endpoint: `https://api.knowman.io/mcp` (Streamable HTTP, stateless, JSON responses, MCP protocol 2025-11-25). It exposes the same six tools.
+
+**Sign in with OAuth.** The server implements OAuth 2.1 for MCP: protected resource metadata at `/.well-known/oauth-protected-resource/mcp`, authorization server metadata at `/.well-known/oauth-authorization-server`, dynamic client registration, authorization code with PKCE (S256), and rotating refresh tokens. A client that supports MCP OAuth connects from the endpoint URL alone: it opens a consent page at `app.knowman.io`, you sign in and approve, and the client receives a one-hour access token plus a refresh token. Access is limited to two scopes: `knowman.read` (search, read, ask) and `knowman.write` (save links).
+
+**Or use an API key.** Create a key in your KnowMan settings and send it as `Authorization: Bearer <key>`:
+
+```json
+{
+  "mcpServers": {
+    "knowman": {
+      "url": "https://api.knowman.io/mcp",
+      "headers": { "Authorization": "Bearer <your-key>" }
+    }
+  }
+}
+```
+
+Claude Code: `claude mcp add --transport http knowman https://api.knowman.io/mcp --header "Authorization: Bearer <your-key>"`.
+
+**What has been verified.** The official MCP TypeScript SDK client completes the whole OAuth flow against the live server (registration, consent, token, tool calls, refresh). We have not yet tested ChatGPT connectors, claude.ai custom connectors or Cursor ourselves; the endpoint follows the requirements those products document, and the redirect URIs they use are allowed. If one of them fails to connect, please open an issue with the product and the error you see.
+
+**Disconnect an app.** Open the API keys list in your KnowMan settings and delete the entry named `OAuth: <app name>`. Deleting it revokes the connection and its refresh token. Changing your password also revokes every connected app.
+
+**Limits.** An API key or an OAuth token cannot create other API keys. Requests are rate limited per token and per IP.
 
 ## CLI reference
 

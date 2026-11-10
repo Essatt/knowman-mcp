@@ -26,5 +26,19 @@
         }
       ]
     }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.knowman.io/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional. Clients that support MCP OAuth sign in through the consent page and need no header. Otherwise send a KnowMan API key as `Bearer <key>` (create one at https://app.knowman.io).",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
   ]
 }
