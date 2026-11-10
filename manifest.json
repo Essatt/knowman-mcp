@@ -9,7 +9,7 @@
     "url": "https://knowman.io"
   },
   "homepage": "https://knowman.io",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "keywords": ["mcp", "knowledge-base", "read-it-later", "knowman"],
   "icon": "icon.png",
   "server": {
