@@ -36,7 +36,7 @@ Run `npm install -g @knowman/mcp`, then `knowman login`. The saved credential is
 
 ## Optional: hosted remote server
 
-Clients that accept remote MCP servers can connect to `https://api.knowman.io/mcp` (Streamable HTTP) instead. Use header `Authorization: Bearer <key>`, or complete the OAuth 2.1 consent flow in the browser if the client supports it.
+Clients that accept remote MCP servers can connect to `https://api.knowman.io/mcp` (Streamable HTTP) instead. The hosted server exposes four tools: `kb_research`, `kb_get_item`, `kb_recent` and `kb_save`. Use header `Authorization: Bearer <key>`, or complete the OAuth 2.1 consent flow in the browser if the client supports it.
 
 ## Troubleshooting
 
