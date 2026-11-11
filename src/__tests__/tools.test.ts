@@ -95,7 +95,7 @@ function createTestClient(routes: MockRoute[], debugMessages: string[] = []) {
   const mock = mockFetch(routes)
   const client = createClient({
     apiUrl: 'https://api.knowman.io/',
-    apiKey: 'km_TEST_KEY_NOT_REAL',
+    apiKey: 'km_12345678901234567890123456789012',
     userAgent: 'knowman-mcp/0.1.0',
     fetch: mock.fetch as unknown as typeof fetch,
     debug: (message) => {
@@ -194,7 +194,7 @@ describe('tools', () => {
     expect(searchUrl.pathname).toBe('/api/v1/search')
     expect(searchUrl.searchParams.get('q')).toBe('cats')
     expect(searchUrl.searchParams.get('limit')).toBe('8')
-    expect(calls[0]?.headers.authorization).toBe('Bearer km_TEST_KEY_NOT_REAL')
+    expect(calls[0]?.headers.authorization).toBe('Bearer km_12345678901234567890123456789012')
     expect(calls[0]?.headers['user-agent']).toBe('knowman-mcp/0.1.0')
 
     const hydrateUrl = new URL(calls[1]?.url ?? '')
@@ -448,12 +448,135 @@ describe('tools', () => {
         },
       ],
       conversationId: null,
+      otherCitations: [{ kind: 'memory', id: 'memory-1' }],
     })
     expect(calls).toHaveLength(3)
-    expect(debugMessages.some((message) => message.includes('dropped 1 non-chunk'))).toBe(true)
+    expect(debugMessages.some((message) => message.includes('dropped'))).toBe(false)
     expect(debugMessages.some((message) => message.includes('could not resolve item item_2'))).toBe(
       true,
     )
+  })
+
+  test('kb_ask returns memory, highlight and note citations in otherCitations with dedup, order and preview cap', async () => {
+    const debugMessages: string[] = []
+    const { client } = createTestClient(
+      [
+        jsonResponse({
+          success: true,
+          data: {
+            answer: 'Answer',
+            citations: [
+              { kind: 'chunk', id: 'chunk-1', version: 'v1' },
+              {
+                kind: 'memory',
+                id: 'mem-1',
+                title: 'Memory title',
+                preview: 'P'.repeat(200),
+                trust: 'internal',
+                origin: 'captured',
+                sourceItemId: 'item_9',
+              },
+              { kind: 'highlight', id: 'hl-1' },
+              { kind: 'memory', id: 'mem-1', title: 'Duplicate title' },
+              { kind: 'note', id: 'note-1' },
+              { kind: 'bogus', id: 'x-1' },
+            ],
+            chunkContext: [
+              {
+                id: 'chunk-1',
+                itemId: 'item_1',
+                text: 'quote 1',
+                itemTitle: null,
+              },
+            ],
+            evidenceHandleId: 'eh_1',
+            costUsd: 0.01,
+            modelTier: 'fast',
+          },
+        }),
+        jsonResponse(
+          {
+            success: false,
+            code: 'boom',
+            message: 'lookup failed',
+          },
+          500,
+        ),
+      ],
+      debugMessages,
+    )
+
+    const result = await kbAsk(
+      client,
+      askInput.parse({
+        question: 'What happened?',
+      }),
+    )
+
+    expect(result.otherCitations).toEqual([
+      {
+        kind: 'memory',
+        id: 'mem-1',
+        title: 'Memory title',
+        preview: 'P'.repeat(160),
+        trust: 'internal',
+        origin: 'captured',
+        sourceItemId: 'item_9',
+      },
+      { kind: 'highlight', id: 'hl-1' },
+      { kind: 'note', id: 'note-1' },
+    ])
+    expect(result.citations).toEqual([
+      {
+        itemId: 'item_1',
+        title: null,
+        url: null,
+        quote: 'quote 1',
+      },
+    ])
+    expect(debugMessages.some((message) => message.includes('unknown citation kind bogus'))).toBe(
+      true,
+    )
+  })
+
+  test('kb_ask otherCitations is an empty array when there are no non-chunk citations', async () => {
+    const { client } = createTestClient([
+      jsonResponse({
+        success: true,
+        data: {
+          answer: 'Answer',
+          citations: [{ kind: 'chunk', id: 'chunk-1', version: 'v1' }],
+          chunkContext: [
+            {
+              id: 'chunk-1',
+              itemId: 'item_1',
+              text: 'quote 1',
+              itemTitle: null,
+            },
+          ],
+          evidenceHandleId: 'eh_1',
+          costUsd: 0.01,
+          modelTier: 'fast',
+        },
+      }),
+      jsonResponse(
+        {
+          success: false,
+          code: 'boom',
+          message: 'lookup failed',
+        },
+        500,
+      ),
+    ])
+
+    const result = await kbAsk(
+      client,
+      askInput.parse({
+        question: 'What happened?',
+      }),
+    )
+
+    expect(result.otherCitations).toEqual([])
   })
 
   test('kb_get_item truncates content and flattens tags', async () => {

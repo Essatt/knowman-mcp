@@ -16,7 +16,7 @@ import { existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const EXPECTED_TOOLS = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_save', 'kb_search']
+export const EXPECTED_TOOLS = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_research', 'kb_save', 'kb_search']
 
 /** Returns a list of problems; an empty list means the tool list is valid. */
 export function validateToolList(output) {

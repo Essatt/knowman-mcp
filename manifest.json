@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "knowman",
   "display_name": "KnowMan",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Search, ask, save and read your KnowMan Knowledge Base from Claude",
   "author": {
     "name": "KnowMan",
@@ -41,12 +41,13 @@
     }
   },
   "tools": [
-    { "name": "kb_search", "description": "Search saved items in the KnowMan Inbox, Knowledge Base and Archive." },
-    { "name": "kb_ask", "description": "Ask a question over the Knowledge Base, with citations." },
+    { "name": "kb_research", "description": "Retrieve ranked evidence across the whole Knowledge Base and memories. The client model writes the answer." },
     { "name": "kb_get_item", "description": "Read the content and metadata of one saved item." },
-    { "name": "kb_save", "description": "Save a URL to the KnowMan Inbox or Knowledge Base." },
     { "name": "kb_recent", "description": "List recently saved items." },
-    { "name": "kb_memories", "description": "List saved memories and playbooks from the Knowledge Base (read-only)." }
+    { "name": "kb_save", "description": "Save a URL to the KnowMan Inbox or Knowledge Base." },
+    { "name": "kb_search", "description": "Deprecated: use kb_research. Search saved items in the KnowMan Inbox, Knowledge Base and Archive." },
+    { "name": "kb_ask", "description": "Deprecated: use kb_research. Ask a question over the Knowledge Base, with citations." },
+    { "name": "kb_memories", "description": "Deprecated: use kb_research. List saved memories and playbooks from the Knowledge Base (read-only)." }
   ],
   "tools_generated": false,
   "compatibility": {

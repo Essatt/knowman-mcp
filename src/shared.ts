@@ -209,3 +209,51 @@ export function sanitizeApiKeyLabel(
   const cleaned = tidy(tidy(raw).slice(0, Math.max(0, API_KEY_LABEL_MAX_LENGTH - prefix.length)))
   return cleaned.length > 0 ? cleaned : fallback
 }
+
+/**
+ * Available API key scopes
+ * Granular permissions for what the key can access
+ */
+export const API_KEY_SCOPES = {
+  /** Read items (list, get) */
+  ITEMS_READ: 'items:read',
+  /** Write items (create, update, delete) */
+  ITEMS_WRITE: 'items:write',
+  /** Read folders */
+  FOLDERS_READ: 'folders:read',
+  /** Write folders */
+  FOLDERS_WRITE: 'folders:write',
+  /** Read tags */
+  TAGS_READ: 'tags:read',
+  /** Write tags */
+  TAGS_WRITE: 'tags:write',
+  /** Read highlights */
+  HIGHLIGHTS_READ: 'highlights:read',
+  /** Write highlights */
+  HIGHLIGHTS_WRITE: 'highlights:write',
+  /** Search items */
+  SEARCH: 'search',
+  /** Read feeds */
+  FEEDS_READ: 'feeds:read',
+  /** Write feeds (subscribe, unsubscribe, update) */
+  FEEDS_WRITE: 'feeds:write',
+  /** Read tag rules */
+  TAG_RULES_READ: 'tag-rules:read',
+  /** Write tag rules (create, update, delete) */
+  TAG_RULES_WRITE: 'tag-rules:write',
+  /** Read memories (ADR-0037 reflection synthesis) */
+  MEMORIES_READ: 'memories:read',
+  /** Write memories (create, update, archive, supersede, accept/reject candidate) */
+  MEMORIES_WRITE: 'memories:write',
+  /** Ask pipeline — multi-source RAG query (ADR-0037 §4.3) */
+  ASK: 'ask',
+  /** Read projects, profiles and impacts (spec v5.5; null-scope keys keep full access) */
+  PROJECTS_READ: 'projects:read',
+  /** Write projects, profiles and impact actions */
+  PROJECTS_WRITE: 'projects:write',
+} as const
+
+export type ApiKeyScope = (typeof API_KEY_SCOPES)[keyof typeof API_KEY_SCOPES]
+
+/** All available scopes */
+export const ALL_SCOPES = Object.values(API_KEY_SCOPES)

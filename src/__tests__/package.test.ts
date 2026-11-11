@@ -33,7 +33,7 @@ describe('publish manifest', () => {
     expect(pkg.bin[unscoped as keyof typeof pkg.bin]).toBe('dist/index.js')
   })
 
-  test('repository points at the standalone knowman-mcp repo', () => {
+  test('repository points at the real GitHub org', () => {
     expect(pkg.repository.url).toBe('git+https://github.com/Essatt/knowman-mcp.git')
   })
 

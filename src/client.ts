@@ -66,6 +66,31 @@ export interface SearchData {
   totalHits: number
 }
 
+export interface ResearchMemory {
+  id: string
+  kind: string
+  text: string
+  sourceItemIds: string[]
+  url: string | null
+}
+
+export interface ResearchPassage {
+  itemId: string
+  title: string
+  url: string
+  savedAt: string
+  score: number
+  text: string
+  trust: ItemTrust
+}
+
+export interface ResearchData {
+  coverage: 'strong' | 'partial' | 'none'
+  memories: ResearchMemory[]
+  passages: ResearchPassage[]
+  note?: string
+}
+
 export interface ItemSummary {
   id: string
   url: string
@@ -123,6 +148,12 @@ export interface AskCitation {
   id?: string
   targetId?: string
   version?: 'v1'
+  title?: string
+  preview?: string
+  trust?: string
+  origin?: string
+  sourceItemId?: string
+  score?: number
 }
 
 export interface ChunkContext {
@@ -176,6 +207,7 @@ export interface KnowmanClient {
     },
   ): Promise<T>
   search(input: { query: string; limit: number; scope?: ItemScope }): Promise<SearchData>
+  research(input: { question: string; max_passages?: number }): Promise<ResearchData>
   listItems(input: {
     limit: number
     location?: 'inbox' | 'kb'
@@ -417,6 +449,13 @@ export function createClient(config: KnowmanClientConfig): KnowmanClient {
     search: ({ query, limit, scope }) =>
       request<SearchData>('GET', '/api/v1/search', {
         query: { q: query, limit, scope },
+      }),
+    research: ({ question, max_passages }) =>
+      request<ResearchData>('POST', '/api/v1/research', {
+        body: {
+          question,
+          ...(max_passages !== undefined ? { max_passages } : {}),
+        },
       }),
     listItems: ({ limit, location, scope, sourceType }) =>
       request<ListItemsData>('GET', '/api/v1/items', {
