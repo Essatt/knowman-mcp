@@ -16,7 +16,7 @@
  */
 import { spawn } from 'node:child_process'
 
-const EXPECTED = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_save', 'kb_search']
+const EXPECTED = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_research', 'kb_save', 'kb_search']
 const [command, ...args] = process.argv.slice(2)
 
 if (!command) {

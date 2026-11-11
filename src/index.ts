@@ -8,6 +8,8 @@ import { authFilePath, readAuthFile, resolveCredentials } from './auth-file'
 import { createClient } from './client'
 import { redactSecret } from './redact'
 import { TOOL_DEFINITIONS } from './tools'
+import { KNOWMAN_SERVER_INSTRUCTIONS } from './instructions'
+import { structuredContentFor } from './structured-content'
 
 // KNOWMAN_API_KEY wins; otherwise the credential `knowman login` saved is used, so a CLI
 // sign-in unlocks this server without a second one. The key itself is never logged. The file is
@@ -46,10 +48,13 @@ const clientConfig = {
 }
 debug(`credentials from ${credentials.source}`)
 
-const server = new McpServer({
-  name: 'knowman',
-  version: pkg.version,
-})
+const server = new McpServer(
+  {
+    name: 'knowman',
+    version: pkg.version,
+  },
+  { instructions: KNOWMAN_SERVER_INSTRUCTIONS },
+)
 
 for (const definition of TOOL_DEFINITIONS) {
   const schema: z.AnyZodObject = definition.inputSchema
@@ -57,12 +62,15 @@ for (const definition of TOOL_DEFINITIONS) {
   server.registerTool(
     definition.name,
     {
+      title: definition.title,
       description: definition.description,
       inputSchema: schema.shape,
+      annotations: definition.annotations,
     },
     async (args: unknown) => {
       try {
         const result = await definition.run(createClient({ ...clientConfig, toolName: definition.name }), args)
+        const structuredContent = structuredContentFor(definition.name, result)
         return {
           content: [
             {
@@ -70,6 +78,7 @@ for (const definition of TOOL_DEFINITIONS) {
               text: JSON.stringify(result, null, 2),
             },
           ],
+          ...(structuredContent ? { structuredContent } : {}),
         }
       } catch (error) {
         return {

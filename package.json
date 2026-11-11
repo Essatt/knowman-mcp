@@ -1,7 +1,7 @@
 {
   "name": "@knowman/mcp",
   "mcpName": "io.github.Essatt/knowman-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": false,
   "type": "module",
   "description": "KnowMan MCP server (stdio) — search, ask, save and read your Knowledge Base from any MCP client",

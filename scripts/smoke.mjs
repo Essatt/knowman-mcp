@@ -3,7 +3,7 @@
  * Publish smoke test: boot dist/index.js under plain Node (no Bun, no repo
  * node_modules on the resolution path beyond the bundle) and drive one real
  * JSON-RPC round trip over stdio — `initialize`, then `tools/list`.
- * Asserts the server answers and exposes exactly the six kb_* tools.
+ * Asserts the server answers and exposes exactly the seven kb_* tools.
  */
 import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const EXPECTED = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_save', 'kb_search']
+const EXPECTED = ['kb_ask', 'kb_get_item', 'kb_memories', 'kb_recent', 'kb_research', 'kb_save', 'kb_search']
 const here = dirname(fileURLToPath(import.meta.url))
 const entry = resolve(here, '..', 'dist', 'index.js')
 
@@ -86,7 +86,7 @@ const listed = await waitFor(2, 'tools/list')
 if (listed.error) fail(`tools/list returned an error: ${JSON.stringify(listed.error)}`)
 
 const names = (listed.result?.tools ?? []).map((t) => t.name).sort()
-if (names.length !== 6) fail(`expected 6 tools, got ${names.length}: ${names.join(', ')}`)
+if (names.length !== EXPECTED.length) fail(`expected ${EXPECTED.length} tools, got ${names.length}: ${names.join(', ')}`)
 if (names.join(',') !== EXPECTED.join(',')) fail(`tool names mismatch: ${names.join(', ')}`)
 
 child.kill('SIGTERM')

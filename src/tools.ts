@@ -1,4 +1,4 @@
-import type { Media, RetweetMeta, SocialMeta } from './shared'
+import { API_KEY_SCOPES, type ApiKeyScope, type Media, type RetweetMeta, type SocialMeta } from './shared'
 import { stripCitations, tidyCitationWhitespace } from './shared'
 import { z } from 'zod'
 import {
@@ -10,6 +10,7 @@ import {
   type KnowmanClient,
   type MemoryDetailData,
   type MemorySummary,
+  type ResearchData,
   truncateContent,
 } from './client'
 
@@ -31,6 +32,11 @@ const scopeSchema = z.enum(['internal', 'external', 'all'])
 function trustOf(value: ItemTrust | null | undefined): ItemTrust {
   return value === 'internal' ? 'internal' : 'external'
 }
+
+export const researchInput = z.object({
+  question: z.string().min(1).max(2000),
+  max_passages: z.number().int().min(1).max(20).optional(),
+})
 
 export const searchInput = z.object({
   query: z.string().min(1).describe('Text to search for in KnowMan.'),
@@ -146,10 +152,33 @@ export interface CitationResult {
   number?: number
 }
 
+export interface OtherCitationResult {
+  kind: 'memory' | 'highlight' | 'note' | 'evidence' | 'entity'
+  id: string
+  title?: string
+  preview?: string
+  trust?: string
+  origin?: string
+  sourceItemId?: string
+}
+
 export interface AskResult {
   answer: string
   citations: CitationResult[]
   conversationId: null
+  otherCitations: OtherCitationResult[]
+  hint?: string
+}
+
+export const ABSTAIN_HINT =
+  'Not enough direct evidence for kb_ask. Try kb_memories (kind playbook), kb_search with other phrasings, then kb_get_item on the best hits.'
+
+export function abstainHint(data: { modelTier?: string; answer: string }): { hint?: string } {
+  const abstained =
+    data.modelTier !== undefined
+      ? data.modelTier === 'abstain'
+      : data.answer.startsWith("I don't have enough")
+  return abstained ? { hint: ABSTAIN_HINT } : {}
 }
 
 export interface ItemResult {
@@ -318,14 +347,48 @@ export async function kbAsk(
     }
   }
 
-  // Resolve chunk→item grouping, one citation per itemId
-  let droppedNonChunk = 0
-  const citationsByItem = new Map<string, { chunk: (typeof data.chunkContext)[number]; sourceNumber?: number }>()
+  const otherCitations: OtherCitationResult[] = []
+  const otherCitationIds = new Set<string>()
+  const knownOtherCitationKinds = new Set([
+    'memory',
+    'highlight',
+    'note',
+    'evidence',
+    'entity',
+  ])
   for (const citation of data.citations) {
-    if (citation.kind !== 'chunk') {
-      droppedNonChunk += 1
+    if (citation.kind === 'chunk') continue
+    if (!knownOtherCitationKinds.has(citation.kind)) {
+      client.debug(`kb_ask ignored unknown citation kind ${citation.kind}`)
       continue
     }
+    const id = citation.id ?? citation.targetId
+    if (id === undefined || otherCitationIds.has(id)) continue
+    otherCitationIds.add(id)
+    const fields = citation as typeof citation & {
+      title?: string
+      preview?: string
+      trust?: string
+      origin?: string
+      sourceItemId?: string
+    }
+    otherCitations.push({
+      kind: citation.kind as OtherCitationResult['kind'],
+      id,
+      ...(fields.title !== undefined ? { title: fields.title } : {}),
+      ...(fields.preview !== undefined
+        ? { preview: Array.from(fields.preview).slice(0, 160).join('') }
+        : {}),
+      ...(fields.trust !== undefined ? { trust: fields.trust } : {}),
+      ...(fields.origin !== undefined ? { origin: fields.origin } : {}),
+      ...(fields.sourceItemId !== undefined ? { sourceItemId: fields.sourceItemId } : {}),
+    })
+  }
+
+  // Resolve chunk→item grouping, one citation per itemId
+  const citationsByItem = new Map<string, { chunk: (typeof data.chunkContext)[number]; sourceNumber?: number }>()
+  for (const citation of data.citations) {
+    if (citation.kind !== 'chunk') continue
     const chunkId = citation.id ?? citation.targetId
     if (chunkId === undefined) continue
     const chunk = chunksById.get(chunkId)
@@ -335,10 +398,6 @@ export async function kbAsk(
       (s) => s.kind === 'item' && s.id === chunk.itemId
     )?.number
     citationsByItem.set(chunk.itemId, { chunk, sourceNumber })
-  }
-
-  if (droppedNonChunk > 0) {
-    client.debug(`kb_ask dropped ${droppedNonChunk} non-chunk citation(s)`)
   }
 
   // Order citations: prefer data.sources order, else first-appearance order
@@ -395,6 +454,8 @@ export async function kbAsk(
       }
     }),
     conversationId: null,
+    otherCitations,
+    ...abstainHint(data),
   }
 }
 
@@ -464,9 +525,8 @@ export async function kbSave(
     location,
     status: created.status,
     // Echo what was ASKED for, not what the response happened to project: the
-    // create response's item shape carries no `trust` field, and reporting
-    // 'external' for a link the caller marked internal would be a lie the
-    // agent then repeats to the user.
+    // create response's item shape carries no `trust` field, and an agent
+    // saving an ordinary link must not start failing because of it.
     trust: values.trust ?? 'external',
   }
 }
@@ -551,50 +611,115 @@ export async function kbMemories(
 
 export const TOOL_DEFINITIONS: Array<{
   name: string
+  title: string
   description: string
   inputSchema: z.AnyZodObject
+  annotations: {
+    readOnlyHint: boolean
+    destructiveHint: boolean
+    idempotentHint: boolean
+    openWorldHint: boolean
+  }
+  scope?: ApiKeyScope
   run: (client: KnowmanClient, rawInput: unknown) => Promise<unknown>
 }> = [
   {
-    name: 'kb_search',
+    name: 'kb_research',
+    title: 'Research the library',
     description:
-      "Search saved items in the KnowMan Inbox, Knowledge Base, or Archive without returning content bodies; a location filter costs one extra lookup per hit. Every result carries `trust`: 'internal' is the user's OWN knowledge (their pages, documents and designated links) and outranks 'external' saved articles on anything about the user themselves.",
+      "Retrieve ranked evidence across the user's whole library and distilled memories. Default tool for factual, strategic and how-to questions. Returns source passages, not an answer.",
+    inputSchema: researchInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    run: (client, rawInput) => client.research(researchInput.parse(rawInput)),
+  },
+  {
+    name: 'kb_search',
+    title: 'Search your knowledge base',
+    description:
+      "Deprecated: use kb_research. Search saved items in the KnowMan Inbox, Knowledge Base, or Archive without returning content bodies; a location filter costs one extra lookup per hit. Every result carries `trust`: 'internal' is the user's OWN knowledge (their pages, documents and designated links) and outranks 'external' saved articles on anything about the user themselves. Returns snippets only; kb_get_item reads the full text.",
     inputSchema: searchInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     run: (client, rawInput) => kbSearch(client, searchInput.parse(rawInput)),
   },
   {
     name: 'kb_ask',
+    title: 'Ask your knowledge base',
     description:
-      'Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item.',
+      'Deprecated: use kb_research. Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.',
     inputSchema: askInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     run: (client, rawInput) => kbAsk(client, askInput.parse(rawInput)),
   },
   {
     name: 'kb_get_item',
+    title: 'Get a saved item',
     description:
-      'Retrieve readable content and metadata for one item from the KnowMan Inbox, Knowledge Base, or Archive.',
+      'Read the full text of one saved item by id when research evidence needs more context.',
     inputSchema: getItemInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     run: (client, rawInput) => kbGetItem(client, getItemInput.parse(rawInput)),
   },
   {
     name: 'kb_save',
+    title: 'Save a link',
     description:
       "Save a URL to the KnowMan Inbox or directly to the Knowledge Base. Pass trust:'internal' when the link is the user's own knowledge (their company docs, their own writing) rather than an outside article.",
     inputSchema: saveInput,
+    scope: API_KEY_SCOPES.ITEMS_WRITE,
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
     run: (client, rawInput) => kbSave(client, saveInput.parse(rawInput)),
   },
   {
     name: 'kb_recent',
+    title: 'Recent saved items',
     description:
-      "List recently saved items from the KnowMan Inbox or Knowledge Base. Every result carries `trust`; 'internal' is the user's own knowledge.",
+      'List recently saved items. Use only when the user asks about recent saves.',
     inputSchema: recentInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     run: (client, rawInput) => kbRecent(client, recentInput.parse(rawInput)),
   },
   {
     name: 'kb_memories',
+    title: 'Your memories',
     description:
-      "List saved memories (claims, decisions, playbooks) from the Knowledge Base; use kind 'playbook' to find step-by-step processes the user has taught KnowMan. Read-only.",
+      "Deprecated: use kb_research. List saved memories (claims, decisions, playbooks) from the Knowledge Base; use kind 'playbook' to find step-by-step processes the user has taught KnowMan. Read-only. Best first stop for process, strategy and how-to questions (kind 'playbook').",
     inputSchema: memoriesInput,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
     run: (client, rawInput) => kbMemories(client, memoriesInput.parse(rawInput)),
   },
 ]

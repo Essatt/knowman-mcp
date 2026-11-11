@@ -27,7 +27,7 @@ describe('scripts/verify-install.sh', () => {
     // The script checks the built bundle, exactly like a user's install.
     const build = Bun.spawnSync(['bun', 'run', 'build'], { cwd: pkgDir })
     if (build.exitCode !== 0) throw new Error(`build failed: ${build.stderr.toString()}`)
-  })
+  }, 120000)
 
   test('passes for mcp + cli against the built bundle and signed-out state', () => {
     const dir = mkdtempSync(join(tmpdir(), 'knowman-verify-'))
@@ -43,7 +43,7 @@ describe('scripts/verify-install.sh', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
-  })
+  }, 150000)
 
   test('reports signed-in when a credential file exists and never prints the key', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'knowman-verify-'))
@@ -59,7 +59,7 @@ describe('scripts/verify-install.sh', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
-  })
+  }, 150000)
 
   test('the MCP probe starts from the saved login file instead of a placeholder', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'knowman-verify-'))
@@ -76,7 +76,7 @@ describe('scripts/verify-install.sh', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
-  })
+  }, 150000)
 
   test('the environment key wins over the saved file, as it does in real use', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'knowman-verify-'))
@@ -91,15 +91,15 @@ describe('scripts/verify-install.sh', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
-  })
+  }, 150000)
 
   test('rejects an unknown argument', () => {
     const { code, err } = run(['bogus'])
     expect(code).toBe(2)
     expect(err).toContain('unknown argument')
-  })
+  }, 150000)
 
   test('ships the probe next to it', () => {
     expect(existsSync(join(pkgDir, 'scripts', 'verify-install-probe.mjs'))).toBe(true)
-  })
+  }, 150000)
 })

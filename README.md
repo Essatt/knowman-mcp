@@ -17,6 +17,7 @@ A stdio MCP server that lets an MCP client search, ask, save and read items in a
 
 | Tool | Purpose |
 |---|---|
+| `kb_research` | Retrieve ranked passages and memories across the whole library in one call; the assistant writes the answer. Also served by the local package from 0.3.1. |
 | `kb_get_item` | Read content and metadata for one item. |
 | `kb_save` | Save a URL to Inbox or Knowledge Base. |
 | `kb_recent` | List recently saved items. |
@@ -119,8 +120,13 @@ Global flags:
   --version
 
 Commands (each also works without the kb- prefix, e.g. "save", "search"):
+kb-research
+  Retrieve ranked evidence across the user's whole library and distilled memories. Default tool for factual, strategic and how-to questions. Returns source passages, not an answer.
+  --question <STRING>
+  --max_passages <NUMBER> [optional]
+
 kb-search
-  Search saved items in the KnowMan Inbox, Knowledge Base, or Archive without returning content bodies; a location filter costs one extra lookup per hit. Every result carries `trust`: 'internal' is the user's OWN knowledge (their pages, documents and designated links) and outranks 'external' saved articles on anything about the user themselves.
+  Deprecated: use kb_research. Search saved items in the KnowMan Inbox, Knowledge Base, or Archive without returning content bodies; a location filter costs one extra lookup per hit. Every result carries `trust`: 'internal' is the user's OWN knowledge (their pages, documents and designated links) and outranks 'external' saved articles on anything about the user themselves. Returns snippets only; kb_get_item reads the full text.
   --query <STRING>
     Text to search for in KnowMan.
   --limit <NUMBER> [optional]
@@ -131,7 +137,7 @@ kb-search
     Which knowledge to search: 'internal' (the user's own pages, documents and designated links), 'external' (articles they saved), or 'all'. Defaults to all.
 
 kb-ask
-  Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item.
+  Deprecated: use kb_research. Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.
   --question <STRING>
     Question to ask over the KnowMan Knowledge Base.
   --item-id <STRING> [optional]
@@ -140,7 +146,7 @@ kb-ask
     Optional project id restricting the question.
 
 kb-get-item
-  Retrieve readable content and metadata for one item from the KnowMan Inbox, Knowledge Base, or Archive.
+  Read the full text of one saved item by id when research evidence needs more context.
   --id <STRING>
     KnowMan item id to retrieve.
 
@@ -156,7 +162,7 @@ kb-save
     Mark the saved link as the user's own knowledge ('internal' — their company docs, their own posts) rather than an outside article ('external', the default).
 
 kb-recent
-  List recently saved items from the KnowMan Inbox or Knowledge Base. Every result carries `trust`; 'internal' is the user's own knowledge.
+  List recently saved items. Use only when the user asks about recent saves.
   --limit <NUMBER> [optional]
     Maximum number of recent items to return.
   --location <STRING> [optional] (one of: inbox|kb)
@@ -167,7 +173,7 @@ kb-recent
     Optional source type filter: manual, extension, rss, newsletter, inbox, or import. Array or comma-separated string. Use sourceType:['manual','extension'] to return only the user's own saves (manual and extension saves). Defaults to all types.
 
 kb-memories
-  List saved memories (claims, decisions, playbooks) from the Knowledge Base; use kind 'playbook' to find step-by-step processes the user has taught KnowMan. Read-only.
+  Deprecated: use kb_research. List saved memories (claims, decisions, playbooks) from the Knowledge Base; use kind 'playbook' to find step-by-step processes the user has taught KnowMan. Read-only. Best first stop for process, strategy and how-to questions (kind 'playbook').
   --project <STRING> [optional]
     Optional project id as a UUID; project name lookup is unavailable.
   --kind <STRING> [optional] (one of: claim|decision|playbook)
