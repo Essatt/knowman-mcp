@@ -4,14 +4,25 @@ A stdio MCP server that lets an MCP client search, ask, save and read items in a
 
 ## Tools
 
+### Hosted server (remote)
+
 | Tool | Purpose |
 |---|---|
-| `kb_search` | Search saved items in Inbox, Knowledge Base and Archive without bodies; results carry trust. |
-| `kb_ask` | Ask a question over the Knowledge Base or one item; returns an answer with citations. |
+| `kb_research` | Retrieve ranked passages and memories across the whole library in one call; the assistant writes the answer. |
+| `kb_get_item` | Read content and metadata for one item. |
+| `kb_recent` | List recently saved items. |
+| `kb_save` | Save a URL to Inbox or Knowledge Base. |
+
+### Local stdio package
+
+| Tool | Purpose |
+|---|---|
 | `kb_get_item` | Read content and metadata for one item. |
 | `kb_save` | Save a URL to Inbox or Knowledge Base. |
 | `kb_recent` | List recently saved items. |
-| `kb_memories` | List saved memories such as claims, decisions and playbooks; read-only. |
+| `kb_search` | Search saved items without bodies; results carry trust. Deprecated; use `kb_research` on the hosted server. |
+| `kb_ask` | Ask a question over the Knowledge Base or one item; returns an answer with citations. Deprecated; use `kb_research` on the hosted server. |
+| `kb_memories` | List saved memories such as claims, decisions and playbooks; read-only. Deprecated; use `kb_research` on the hosted server. |
 
 ## Install
 
@@ -51,13 +62,15 @@ Cursor (`~/.cursor/mcp.json`, or `.cursor/mcp.json` in a project): use the same 
 
 Prefer signing in with the browser instead of pasting a key? Install the package globally (`npm install -g @knowman/mcp`) and run `knowman login`. The saved credential is shared with `knowman-mcp`, so the `env` block is not needed. Run `knowman status` to check it.
 
-The package above speaks stdio and runs on your own machine. KnowMan also runs a hosted server, described next, for clients that only accept remote MCP servers.
+The package runs on your own machine over stdio. KnowMan also runs a hosted server at the endpoint in the next section, for clients that only accept remote MCP servers, such as claude.ai custom connectors.
 
 ## Remote (hosted) server
 
-Endpoint: `https://api.knowman.io/mcp` (Streamable HTTP, stateless, JSON responses, MCP protocol 2025-11-25). It exposes the same six tools.
+Endpoint: `https://api.knowman.io/mcp` (Streamable HTTP, stateless, JSON responses, MCP protocol 2025-11-25). It exposes four tools: `kb_research`, `kb_get_item`, `kb_recent` and `kb_save` (see Tools above).
 
-**Sign in with OAuth.** The server implements OAuth 2.1 for MCP: protected resource metadata at `/.well-known/oauth-protected-resource/mcp`, authorization server metadata at `/.well-known/oauth-authorization-server`, dynamic client registration, authorization code with PKCE (S256), and rotating refresh tokens. A client that supports MCP OAuth connects from the endpoint URL alone: it opens a consent page at `app.knowman.io`, you sign in and approve, and the client receives a one-hour access token plus a refresh token. Access is limited to two scopes: `knowman.read` (search, read, ask) and `knowman.write` (save links).
+**claude.ai.** Open Settings, then Connectors, then Add custom connector, and enter `https://api.knowman.io/mcp`. Sign in with your KnowMan account when the browser opens.
+
+**Sign in with OAuth.** The server implements OAuth 2.1 for MCP: protected resource metadata at `/.well-known/oauth-protected-resource/mcp`, authorization server metadata at `/.well-known/oauth-authorization-server`, dynamic client registration, authorization code with PKCE (S256), and rotating refresh tokens. A client that supports MCP OAuth connects from the endpoint URL alone: it opens a consent page at `app.knowman.io`, you sign in and approve, and the client receives a one-hour access token plus a refresh token. Access is limited to two scopes: `knowman.read` (search and read) and `knowman.write` (save links).
 
 **Or use an API key.** Create a key in your KnowMan settings and send it as `Authorization: Bearer <key>`:
 
@@ -74,7 +87,7 @@ Endpoint: `https://api.knowman.io/mcp` (Streamable HTTP, stateless, JSON respons
 
 Claude Code: `claude mcp add --transport http knowman https://api.knowman.io/mcp --header "Authorization: Bearer <your-key>"`.
 
-**What has been verified.** The official MCP TypeScript SDK client completes the whole OAuth flow against the live server (registration, consent, token, tool calls, refresh). We have not yet tested ChatGPT connectors, claude.ai custom connectors or Cursor ourselves; the endpoint follows the requirements those products document, and the redirect URIs they use are allowed. If one of them fails to connect, please open an issue with the product and the error you see.
+**What has been verified.** The official MCP TypeScript SDK client completes the whole OAuth flow against the live server (registration, consent, token, tool calls, refresh). We have not yet tested ChatGPT connectors or Cursor ourselves; the endpoint follows the requirements those products document, and the redirect URIs they use are allowed. If one of them fails to connect, please open an issue with the product and the error you see.
 
 **Disconnect an app.** Open the API keys list in your KnowMan settings and delete the entry named `OAuth: <app name>`. Deleting it revokes the connection and its refresh token. Changing your password also revokes every connected app.
 
