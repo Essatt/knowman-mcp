@@ -197,6 +197,11 @@ export interface ListMemoriesData {
 
 export type MemoryDetailData = MemorySummary | { memory: MemorySummary & Record<string, unknown> }
 
+export interface AskSourcesInput {
+  include?: Array<'items' | 'memories' | 'entities'>
+  facets?: { kbMember?: boolean | null }
+}
+
 export interface KnowmanClient {
   request<T>(
     method: string,
@@ -218,7 +223,12 @@ export interface KnowmanClient {
   createItem(input: { url: string; trust?: ItemTrust }): Promise<CreateItemData>
   setKbMember(id: string, kbMember: boolean): Promise<unknown>
   updateItem(id: string, input: { notes: string }): Promise<unknown>
-  ask(input: { query: string; itemId?: string; projectId?: string }): Promise<AskData>
+  ask(input: {
+    query: string
+    itemId?: string
+    projectId?: string
+    sources?: AskSourcesInput
+  }): Promise<AskData>
   listMemories(input: {
     kind?: 'claim' | 'decision' | 'playbook'
     limit: number
@@ -493,12 +503,13 @@ export function createClient(config: KnowmanClientConfig): KnowmanClient {
       request<unknown>('PATCH', `/api/v1/items/${encodeURIComponent(id)}`, {
         body: { notes },
       }),
-    ask: ({ query, itemId, projectId }) =>
+    ask: ({ query, itemId, projectId, sources }) =>
       request<AskData>('POST', '/api/v1/ask', {
         body: {
           query,
           ...(itemId !== undefined ? { itemId } : {}),
           ...(projectId !== undefined ? { projectId } : {}),
+          ...(sources !== undefined ? { sources } : {}),
         },
       }),
     listMemories: ({ kind, limit, projectId, lifecycleStates }) =>

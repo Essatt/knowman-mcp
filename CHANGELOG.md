@@ -2,6 +2,20 @@
 
 All notable changes to `@knowman/mcp` are listed here. Earlier releases are not recorded in this file.
 
+## 0.3.3 (2026-11-14)
+
+### Fixed
+
+- `kb_ask` now searches the whole library by default instead of only Knowledge Base members, so questions can find relevant Inbox content.
+
+### Added
+
+- `kb_ask` accepts an optional scope: `all` (default, Inbox and Knowledge Base), `kb` (Knowledge Base only) or `inbox` (Inbox only). A specific `itemId` remains unchanged and ignores scope.
+
+### Note
+
+- Version 0.3.2 on npm carried incorrect package metadata: license `UNLICENSED`, a private repository URL and no `mcpName`. Version 0.3.3 supersedes it with the same code and correct public metadata.
+
 ## 0.3.1
 
 ### Removed
