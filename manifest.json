@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "knowman",
   "display_name": "KnowMan",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "Search, ask, save and read your KnowMan Knowledge Base from Claude",
   "author": {
     "name": "KnowMan",

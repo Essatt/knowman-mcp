@@ -141,6 +141,7 @@ describe('deriveFlags', () => {
       { key: 'question', kind: 'string', optional: false },
       { key: 'itemId', kind: 'string', optional: true },
       { key: 'projectId', kind: 'string', optional: true },
+      { key: 'scope', kind: 'string', optional: true, enumValues: ['all', 'kb', 'inbox'] },
     ])
   })
 
