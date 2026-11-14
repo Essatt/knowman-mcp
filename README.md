@@ -17,12 +17,12 @@ A stdio MCP server that lets an MCP client search, ask, save and read items in a
 
 | Tool | Purpose |
 |---|---|
-| `kb_research` | Retrieve ranked passages and memories across the whole library in one call; the assistant writes the answer. Also served by the local package from 0.3.1. |
+| `kb_research` | Retrieve ranked passages and memories across the whole library in one call; the assistant writes the answer. Also served by the local package from 0.3.3. |
 | `kb_get_item` | Read content and metadata for one item. |
 | `kb_save` | Save a URL to Inbox or Knowledge Base. |
 | `kb_recent` | List recently saved items. |
 | `kb_search` | Search saved items without bodies; results carry trust. Deprecated; use `kb_research` on the hosted server. |
-| `kb_ask` | Ask a question over the Knowledge Base or one item; returns an answer with citations. Deprecated; use `kb_research` on the hosted server. |
+| `kb_ask` | Ask a question over the whole library (Inbox and Knowledge Base) by default; an optional scope narrows it to either location. Deprecated; use `kb_research` on the hosted server. |
 | `kb_memories` | List saved memories such as claims, decisions and playbooks; read-only. Deprecated; use `kb_research` on the hosted server. |
 
 ## Install
@@ -137,13 +137,15 @@ kb-search
     Which knowledge to search: 'internal' (the user's own pages, documents and designated links), 'external' (articles they saved), or 'all'. Defaults to all.
 
 kb-ask
-  Deprecated: use kb_research. Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.
+  Deprecated: use kb_research. Ask a question over the whole KnowMan library by default (Inbox and Knowledge Base; pass scope to narrow to kb or inbox), or a single item when itemId is given; returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.
   --question <STRING>
     Question to ask over the KnowMan Knowledge Base.
   --item-id <STRING> [optional]
     Optional item id restricting the question.
   --project-id <STRING> [optional]
     Optional project id restricting the question.
+  --scope <STRING> [optional] (one of: all|kb|inbox)
+    Which part of the library to search: all (default): the whole library, Inbox and Knowledge Base; kb: Knowledge Base only; inbox: Inbox only. Ignored when itemId is given.
 
 kb-get-item
   Read the full text of one saved item by id when research evidence needs more context.
