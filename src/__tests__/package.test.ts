@@ -17,6 +17,10 @@ describe('publish manifest', () => {
   test('is publishable under the @knowman scope', () => {
     expect(pkg.name).toBe('@knowman/mcp')
     expect(pkg.private).toBe(false)
+    expect(pkg.version).toBe('0.3.3')
+    expect(pkg.license).toBe('MIT')
+    expect(pkg.author).toBe('KnowMan')
+    expect(pkg.mcpName).toBe('io.github.Essatt/knowman-mcp')
     expect(manifest.version).toBe(pkg.version)
   })
 
@@ -37,7 +41,7 @@ describe('publish manifest', () => {
     expect(pkg.repository.url).toBe('git+https://github.com/Essatt/knowman-mcp.git')
   })
 
-  test('ships only the bundle and the README', () => {
+  test('ships the bundle, README and public license', () => {
     expect(pkg.files).toEqual(['dist', 'README.md', 'LICENSE'])
   })
 

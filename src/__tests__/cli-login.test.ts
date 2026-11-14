@@ -17,14 +17,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { chmodSync, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { z } from 'zod'
-import { API_KEY_LABEL_MAX_LENGTH, API_KEY_LABEL_PATTERN, CLI_API_KEY_LABEL_PREFIX } from '../shared'
-
-// Test-only mirror of the monorepo createApiKeySchema label rule (packages/shared auth.ts).
-const createApiKeySchema = z.object({
-  label: z.string().min(1).max(API_KEY_LABEL_MAX_LENGTH).regex(API_KEY_LABEL_PATTERN),
-  client: z.enum(['extension', 'mcp', 'cli', 'api']).optional().nullable(),
-})
+import { createApiKeySchema, CLI_API_KEY_LABEL_PREFIX } from '../shared'
 import { main, findTool, formatHelp } from '../cli'
 import { loginLabel, runAccountCommand } from '../cli-account'
 import { createClient, type KnowmanClientConfig } from '../client'

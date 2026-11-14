@@ -4,6 +4,13 @@ import type {
   ItemTrust as SharedItemTrust,
   SocialMeta,
 } from './shared'
+import type { AskScopeKind } from './shared'
+
+/** Explicit Ask scope sent to POST /api/v1/ask; mirrors the web app's sources payload. */
+export interface AskSourcesInput {
+  include?: AskScopeKind[]
+  facets?: { kbMember?: boolean | null }
+}
 
 export interface KnowmanClientConfig {
   apiUrl: string
@@ -218,7 +225,12 @@ export interface KnowmanClient {
   createItem(input: { url: string; trust?: ItemTrust }): Promise<CreateItemData>
   setKbMember(id: string, kbMember: boolean): Promise<unknown>
   updateItem(id: string, input: { notes: string }): Promise<unknown>
-  ask(input: { query: string; itemId?: string; projectId?: string }): Promise<AskData>
+  ask(input: {
+    query: string
+    itemId?: string
+    projectId?: string
+    sources?: AskSourcesInput
+  }): Promise<AskData>
   listMemories(input: {
     kind?: 'claim' | 'decision' | 'playbook'
     limit: number
@@ -493,12 +505,13 @@ export function createClient(config: KnowmanClientConfig): KnowmanClient {
       request<unknown>('PATCH', `/api/v1/items/${encodeURIComponent(id)}`, {
         body: { notes },
       }),
-    ask: ({ query, itemId, projectId }) =>
+    ask: ({ query, itemId, projectId, sources }) =>
       request<AskData>('POST', '/api/v1/ask', {
         body: {
           query,
           ...(itemId !== undefined ? { itemId } : {}),
           ...(projectId !== undefined ? { projectId } : {}),
+          ...(sources !== undefined ? { sources } : {}),
         },
       }),
     listMemories: ({ kind, limit, projectId, lifecycleStates }) =>

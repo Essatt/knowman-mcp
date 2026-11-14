@@ -5,7 +5,12 @@
  * constants below are copied verbatim, and the types are hand-written mirrors of the zod
  * schemas in packages/shared/src/contracts/entities/{media,retweet,social}.ts. The monorepo
  * stays the source of truth; keep these in sync when those files change.
+ * AskScopeKind is copied verbatim from packages/shared/src/contracts/ask-artifact.ts.
+ * apiKeyScopeSchema and createApiKeySchema are copied verbatim from
+ * packages/shared/src/contracts/validation/auth.ts.
  */
+
+import { z } from 'zod'
 
 export const ITEM_TRUSTS = ['external', 'internal'] as const
 export type ItemTrust = (typeof ITEM_TRUSTS)[number]
@@ -257,3 +262,23 @@ export type ApiKeyScope = (typeof API_KEY_SCOPES)[keyof typeof API_KEY_SCOPES]
 
 /** All available scopes */
 export const ALL_SCOPES = Object.values(API_KEY_SCOPES)
+
+export type AskScopeKind = 'items' | 'memories' | 'entities'
+
+/** Available API key scopes — copied from packages/shared/src/contracts/validation/auth.ts. */
+export const apiKeyScopeSchema = z.enum(ALL_SCOPES as [ApiKeyScope, ...ApiKeyScope[]])
+
+/** Create API key request — copied from packages/shared/src/contracts/validation/auth.ts. */
+export const createApiKeySchema = z.object({
+  label: z
+    .string()
+    .min(1, 'Label is required')
+    .max(API_KEY_LABEL_MAX_LENGTH, 'Label must be 100 characters or less')
+    .regex(
+      API_KEY_LABEL_PATTERN,
+      'Label can only contain letters, numbers, spaces, hyphens, and underscores',
+    ),
+  scopes: z.array(apiKeyScopeSchema).optional().nullable(),
+  expiresAt: z.string().datetime().optional().nullable(),
+  client: z.enum(['extension', 'mcp', 'cli', 'api']).optional().nullable(),
+})

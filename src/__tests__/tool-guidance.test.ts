@@ -10,7 +10,7 @@ test('tool descriptions explain how to use KnowMan knowledge tools', () => {
   expect(descriptions.get('kb_search')).toContain(' Returns snippets only; kb_get_item reads the full text.')
 
   expect(descriptions.get('kb_ask')).toStartWith(
-    'Deprecated: use kb_research. Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item.',
+    'Deprecated: use kb_research. Ask a question over the whole KnowMan library by default (Inbox and Knowledge Base; pass scope to narrow to kb or inbox), or a single item when itemId is given; returns an answer plus citations whose itemId resolves via kb_get_item.',
   )
   expect(descriptions.get('kb_ask')).toContain(
     ' Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.',

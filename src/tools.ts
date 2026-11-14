@@ -1,7 +1,8 @@
 import { API_KEY_SCOPES, type ApiKeyScope, type Media, type RetweetMeta, type SocialMeta } from './shared'
-import { stripCitations, tidyCitationWhitespace } from './shared'
+import { type AskScopeKind, stripCitations, tidyCitationWhitespace } from './shared'
 import { z } from 'zod'
 import {
+  type AskSourcesInput,
   type CreateItemData,
   type Item,
   type ItemData,
@@ -57,10 +58,37 @@ export const searchInput = z.object({
     ),
 })
 
+export const ASK_SCOPES = ['all', 'kb', 'inbox'] as const
+export type AskScope = (typeof ASK_SCOPES)[number]
+
+const ASK_KINDS: AskScopeKind[] = ['items', 'memories', 'entities']
+
+/**
+ * The same `sources` payload the web app sends for each location pick
+ * (apps/web SourcePicker): All has no location facet, Knowledge Base and
+ * Inbox pin facets.kbMember. Without it the API searches KB members only.
+ */
+export function askSourcesForScope(scope: AskScope): AskSourcesInput {
+  switch (scope) {
+    case 'all':
+      return { include: [...ASK_KINDS] }
+    case 'kb':
+      return { include: [...ASK_KINDS], facets: { kbMember: true } }
+    case 'inbox':
+      return { include: [...ASK_KINDS], facets: { kbMember: false } }
+  }
+}
+
 export const askInput = z.object({
   question: z.string().min(1).describe('Question to ask over the KnowMan Knowledge Base.'),
   itemId: z.string().min(1).optional().describe('Optional item id restricting the question.'),
   projectId: z.string().min(1).optional().describe('Optional project id restricting the question.'),
+  scope: z
+    .enum(ASK_SCOPES)
+    .default('all')
+    .describe(
+      'Which part of the library to search: all (default): the whole library, Inbox and Knowledge Base; kb: Knowledge Base only; inbox: Inbox only. Ignored when itemId is given.',
+    ),
 })
 
 export const getItemInput = z.object({
@@ -333,11 +361,18 @@ export async function kbAsk(
   input: z.input<typeof askInput>,
 ): Promise<AskResult> {
   const values = askInput.parse(input)
-  const data = await client.ask({
-    query: values.question,
-    ...(values.itemId !== undefined ? { itemId: values.itemId } : {}),
-    ...(values.projectId !== undefined ? { projectId: values.projectId } : {}),
-  })
+  const data =
+    values.itemId !== undefined
+      ? await client.ask({
+          query: values.question,
+          itemId: values.itemId,
+          ...(values.projectId !== undefined ? { projectId: values.projectId } : {}),
+        })
+      : await client.ask({
+          query: values.question,
+          ...(values.projectId !== undefined ? { projectId: values.projectId } : {}),
+          sources: askSourcesForScope(values.scope),
+        })
 
   const chunksById = new Map<string, (typeof data.chunkContext)[number]>()
   for (const chunk of data.chunkContext) {
@@ -655,7 +690,7 @@ export const TOOL_DEFINITIONS: Array<{
     name: 'kb_ask',
     title: 'Ask your knowledge base',
     description:
-      'Deprecated: use kb_research. Ask a question over the whole Knowledge Base (or a single item when itemId is given); returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.',
+      'Deprecated: use kb_research. Ask a question over the whole KnowMan library by default (Inbox and Knowledge Base; pass scope to narrow to kb or inbox), or a single item when itemId is given; returns an answer plus citations whose itemId resolves via kb_get_item. Answers specific questions with citations; may abstain on broad questions: then use kb_memories, kb_search and kb_get_item.',
     inputSchema: askInput,
     annotations: {
       readOnlyHint: true,
